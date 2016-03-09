@@ -1,6 +1,11 @@
 var Canvas = require('drawille-canvas')
+var colors = require('colors')
+
+var width = process.stdout.columns * 2
+console.log(width)
+var proportion = 256 / width
 require('fs').readFile('./testile.geojson', 'utf8', function (err, data) {
-  c = new Canvas(128, 128)
+  c = new Canvas(width, width)
   if (err) throw err; // we'll not consider error handling for now
   var obj = JSON.parse(data);
 
@@ -9,7 +14,7 @@ require('fs').readFile('./testile.geojson', 'utf8', function (err, data) {
   })
   c.stroke()
   c.fill()
-  console.log(c.toString())
+  console.log(c.toString().yellow)
 });
 
 wrapX = function (x, zoom) {
@@ -29,8 +34,8 @@ projectPoint = function(x, y){
   var earthRadius2 = earthRadius / 2
   var invEarth = 1.0 / earthRadius
   var pixelScale = 256 * (1 << tilePoint.zoom)
-  x = (pixelScale * (x + earthRadius2) * invEarth - corrected_x * 256)/2
-  y = (pixelScale * (-y + earthRadius2) * invEarth - tilePoint.y * 256)/2
+  x = (pixelScale * (x + earthRadius2) * invEarth - corrected_x * 256)/proportion
+  y = (pixelScale * (-y + earthRadius2) * invEarth - tilePoint.y * 256)/proportion
   return [x,y]
 }
 
