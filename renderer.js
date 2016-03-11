@@ -1,9 +1,9 @@
-var width = process.stdout.columns * 2
-var proportion = 256 / width
+var Canvas = require('drawille-canvas')
 
 function Renderer (width, height) {
-  this.width = width
-  this.height = height
+  this.width = width * 2 
+  this.height = height * 4 
+  this.canvas = new Canvas(width, height)
 }
 
 Renderer.prototype = {
@@ -15,29 +15,71 @@ Renderer.prototype = {
 
   },
 
-  wrapX = function (x, zoom) {
+  generateMap: function (coordinates, zoom, callback) {
+    this.coordinates = coordinates
+    this.zoom = zoom
+    var tilesToDownload = this._getTilesToLoad()
+    // var obj = JSON.parse(data);
+    // obj.features.forEach(function(f){
+    //   renderFeature(f)
+    // })
+  },
+
+
+  getBounds: function() {
+    var totalPixelsForThisZoom = 256 * (this.zoom << 2)
+    var metersPerPixel = 6378137 * 2 * Math.PI / totalPixelsForThisZoom
+    return {
+      n: this.coordinates[1] + this.height / 2 * metersPerPixel,
+      s: this.coordinates[1] - this.height / 2 * metersPerPixel,
+      e: this.coordinates[0] + this.width / 2 * metersPerPixel,
+      w: this.coordinates[0] - this.width / 2 * metersPerPixel
+    }
+  },
+
+  _getTilesToLoad: function () {
+    var bounds = this.getBounds()
+    var nwTile = this._getTileFromMetres([bounds.n,bounds.w])
+    var seTile = this._getTileFromMetres([bounds.s,bounds.e])
+    var tilesToLoad = []
+    for (var y = nwTile.y; y <= seTile.y; y++) {
+      for (var x = nwTile.x; x <= seTile.x; x++) {
+        tilesToLoad.push({x: x, y: y, zoom: this.zoom})
+      }
+    }
+    console.log(tilesToLoad)
+    return tilesToLoad
+  },
+
+  _getTileFromMetres: function(coordinates) {
+    var self = this
+    var halfeq = 6378137 * Math.PI
+    var sideTiles = Math.pow(2, this.zoom)
+    var x = Math.floor(sideTiles * (coordinates[1] + halfeq) / (2 * halfeq))
+    var y = sideTiles - Math.floor(sideTiles * (coordinates[0] + halfeq/2) / halfeq )
+    
+    return {x: x, y: y, zoom: this.zoom}
+  },
+
+  _wrapX : function (x, zoom) {
     var limit_x = Math.pow(2, zoom)
     var corrected_x = ((x % limit_x) + limit_x) % limit_x
     return corrected_x
   },
 
-  projectPoint = function(x, y) {
-    var tilePoint = {
-      x: 8,
-      y: 6,
-      zoom: 4
-    }
-    var corrected_x = wrapX(tilePoint.x, tilePoint.zoom)
-    var earthRadius = 6378137 * 2 * Math.PI
-    var earthRadius2 = earthRadius / 2
-    var invEarth = 1.0 / earthRadius
+  _projectPoint : function(x, y) {
+    var proportion = 256 / this.width
+    var corrected_x = this._wrapX(tilePoint.x, tilePoint.zoom)
+    var equatorLength = 6378137 * 2 * Math.PI
+    var halfEquator = equatorLength / 2
+    var invEarth = 1.0 / equatorLength
     var pixelScale = 256 * (1 << tilePoint.zoom)
-    x = (pixelScale * (x + earthRadius2) * invEarth - corrected_x * 256)/proportion
-    y = (pixelScale * (-y + earthRadius2) * invEarth - tilePoint.y * 256)/proportion
+    x = pixelScale * (x + halfEquator) * invEarth - corrected_x * 256
+    y = pixelScale * (-y + halfEquator) * invEarth - tilePoint.y * 256
     return [x,y]
   },
 
-  renderFeature = function(feature) {
+  renderFeature: function(feature) {
     if(feature.geometry.type === 'GeometryCollection') return
     var first = true
     if (feature.geometry.type === 'MultiPolygon') {
@@ -47,10 +89,10 @@ Renderer.prototype = {
             var projected = projectPoint.apply(this,p)
             if(first){
               first = false
-              c.moveTo.apply(c, projected)
+              this.canvas.moveTo.apply(c, projected)
             }
             else{
-              c.lineTo.apply(c, projected)
+              this.canvas.lineTo.apply(c, projected)
             }
           })
           first = true
@@ -62,10 +104,10 @@ Renderer.prototype = {
           var projected = projectPoint.apply(this,p)
           if(first){
             first = false
-            c.moveTo.apply(c, projected)
+            this.canvas.moveTo.apply(c, projected)
           }
           else{
-            c.lineTo.apply(c, projected)
+            this.canvas.lineTo.apply(c, projected)
           }
         })
         first = true
@@ -73,3 +115,5 @@ Renderer.prototype = {
     }
   }  
 }
+
+module.exports = Renderer
