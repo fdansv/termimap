@@ -9,6 +9,8 @@
   "author": "Francisco Dans",
   "license": "ISC",
   "dependencies": {
+    "blessed": "^0.1.81",
+    "clear": "0.0.1",
     "colors": "^1.1.2",
     "drawille-canvas": "^1.1.2"
   }
