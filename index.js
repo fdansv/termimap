@@ -1,78 +1,51 @@
-var Canvas = require('drawille-canvas')
 var colors = require('colors')
+var clear = require('clear')
+var blessed = require('blessed');
+var Renderer = require('./renderer.js')
 
-var width = process.stdout.columns * 2
-console.log(width)
-var proportion = 256 / width
-require('fs').readFile('./testile.geojson', 'utf8', function (err, data) {
-  c = new Canvas(width, width)
-  if (err) throw err; // we'll not consider error handling for now
-  var obj = JSON.parse(data);
-
-  obj.features.forEach(function(f){
-    renderFeature(f)
-  })
-  c.stroke()
-  c.fill()
-  console.log(c.toString().yellow)
+var screen = blessed.screen({
+  smartCSR: true
 });
 
-wrapX = function (x, zoom) {
-  var limit_x = Math.pow(2, zoom)
-  var corrected_x = ((x % limit_x) + limit_x) % limit_x
-  return corrected_x
-}
+var renderer = new Renderer(screen.width, screen.height);
 
-projectPoint = function(x, y){
-  var tilePoint = {
-    x: 8,
-    y: 6,
-    zoom: 4
-  }
-  var corrected_x = wrapX(tilePoint.x, tilePoint.zoom)
-  var earthRadius = 6378137 * 2 * Math.PI
-  var earthRadius2 = earthRadius / 2
-  var invEarth = 1.0 / earthRadius
-  var pixelScale = 256 * (1 << tilePoint.zoom)
-  x = (pixelScale * (x + earthRadius2) * invEarth - corrected_x * 256)/proportion
-  y = (pixelScale * (-y + earthRadius2) * invEarth - tilePoint.y * 256)/proportion
-  return [x,y]
-}
+screen.title = 'Termimap!'
 
-renderFeature = function(feature) {
-  if(feature.geometry.type === 'GeometryCollection') return
-  var first = true
-  if (feature.geometry.type === 'MultiPolygon') {
-    feature.geometry.coordinates.forEach(function(mp) {
-      mp.forEach(function(poly) {
-        poly.forEach(function(p) {
-          var projected = projectPoint.apply(this,p)
-          if(first){
-            first = false
-            c.moveTo.apply(c, projected)
-          }
-          else{
-            c.lineTo.apply(c, projected)
-          }
-        })
-        first = true
-      })
-    })
-  } else if (feature.geometry.type === 'Polygon') {
-    feature.geometry.coordinates.forEach(function(poly) {
-      poly.forEach(function(p) {
-        var projected = projectPoint.apply(this,p)
-        if(first){
-          first = false
-          c.moveTo.apply(c, projected)
-        }
-        else{
-          c.lineTo.apply(c, projected)
-        }
-      })
-      first = true
-    })
+var box = blessed.box({
+  top: 'center',
+  left: 'center',
+  width: '100%',
+  height: '100%',
+  content: '',
+  tags: true,
+  border: {
+    type: 'line'
+  },
+  style: {
+    fg: 'white',
+    bg: 'magenta',
+    border: {
+      fg: '#fff000'
+    },
   }
-}
+});
+
+screen.key(['escape', 'q', 'C-c'], function(ch, key) {
+  return process.exit(0);
+});
+
+var coordinates = [0,0]
+renderer.generateMap(coordinates, 3, function (text) {
+  box.content = text
+})
+require('fs').readFile('./testile.geojson', 'utf8', function (err, data) {
+  if (err) throw err;
+  
+  c.stroke()
+  c.fill()
+  box.content = c.toString().yellow
+  screen.append(box);
+  screen.render();
+});
 
 
