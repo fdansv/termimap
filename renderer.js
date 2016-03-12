@@ -126,8 +126,8 @@ Renderer.prototype = {
         mp.forEach(function(poly) {
           poly.forEach(function(p) {
             var projected = self._projectPoint(p[0], p[1], tilePoint)
-            projected[0] += basePosition[0]
-            projected[1] += basePosition[1]
+            // projected[0] += basePosition[0]
+            // projected[1] += basePosition[1]
             if(first){
               first = false
               self.canvas.moveTo.apply(self.canvas, projected)
@@ -143,8 +143,8 @@ Renderer.prototype = {
       feature.geometry.coordinates.forEach(function (poly) {
         poly.forEach(function (p) {
           var projected = self._projectPoint( [0], p[1], tilePoint)
-          projected[0] += basePosition[0]
-          projected[1] += basePosition[1]
+          // projected[0] += basePosition[0]
+          // projected[1] += basePosition[1]
           if (first) {
             first = false
             self.canvas.moveTo.apply(self.canvas, projected)
