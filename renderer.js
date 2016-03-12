@@ -1,4 +1,5 @@
 var Canvas = require('drawille-canvas')
+var request = require('request')
 
 function Renderer (width, height) {
   this.width = width * 2 
@@ -16,15 +17,29 @@ Renderer.prototype = {
   },
 
   generateMap: function (coordinates, zoom, callback) {
+    var self = this
     this.coordinates = coordinates
     this.zoom = zoom
     var tilesToDownload = this._getTilesToLoad()
-    // var obj = JSON.parse(data);
-    // obj.features.forEach(function(f){
-    //   renderFeature(f)
-    // })
+    tilesToDownload.forEach(function (t) {
+      var url = 'https://cartocdn-ashbu.global.ssl.fastly.net/fdansv/api/v1/map/b03db5a9b69ce6d4d3ee14949ece15d8:1457562289526/0/{z}/{x}/{y}.geojson?map_key=794a3db60129527035e4c8ab66968a29cb1568be&api_key=794a3db60129527035e4c8ab66968a29cb1568be&cache_policy=persist'
+        .replace('{x}', t.x)
+        .replace('{y}', t.y)
+        .replace('{z}', t.zoom)
+      request(url, function (error, response, body) {
+        if (!error && response.statusCode == 200) {
+          self.drawTile(this, JSON.parse(body))
+        }
+      }.bind(t))
+    })
   },
 
+  drawTile: function (tilePoint, tile) {
+    var self = this
+    tile.features.forEach(function (f) {
+      self.renderFeature(f, tilePoint)
+    })
+  },
 
   getBounds: function() {
     var totalPixelsForThisZoom = 256 * (this.zoom << 2)
@@ -47,7 +62,6 @@ Renderer.prototype = {
         tilesToLoad.push({x: x, y: y, zoom: this.zoom})
       }
     }
-    console.log(tilesToLoad)
     return tilesToLoad
   },
 
@@ -79,14 +93,15 @@ Renderer.prototype = {
     return [x,y]
   },
 
-  renderFeature: function(feature) {
-    if(feature.geometry.type === 'GeometryCollection') return
+  renderFeature: function(feature, tilePoint) {
+
+    if (feature.geometry.type === 'GeometryCollection') return
     var first = true
     if (feature.geometry.type === 'MultiPolygon') {
       feature.geometry.coordinates.forEach(function(mp) {
         mp.forEach(function(poly) {
           poly.forEach(function(p) {
-            var projected = projectPoint.apply(this,p)
+            var projected = this.projectPoint.apply(this,p)
             if(first){
               first = false
               this.canvas.moveTo.apply(c, projected)
@@ -99,14 +114,13 @@ Renderer.prototype = {
         })
       })
     } else if (feature.geometry.type === 'Polygon') {
-      feature.geometry.coordinates.forEach(function(poly) {
-        poly.forEach(function(p) {
-          var projected = projectPoint.apply(this,p)
-          if(first){
+      feature.geometry.coordinates.forEach(function (poly) {
+        poly.forEach(function (p) {
+          var projected = this.projectPoint.apply(this, p)
+          if (first) {
             first = false
             this.canvas.moveTo.apply(c, projected)
-          }
-          else{
+          } else {
             this.canvas.lineTo.apply(c, projected)
           }
         })
