@@ -5,6 +5,7 @@ function Renderer (width, height) {
   this.width = width * 2 
   this.height = height * 4 
   this.canvas = new Canvas(width, height)
+  this.pendingTiles = {}
 }
 
 Renderer.prototype = {
@@ -22,6 +23,7 @@ Renderer.prototype = {
     this.zoom = zoom
     var tilesToDownload = this._getTilesToLoad()
     tilesToDownload.forEach(function (t) {
+      self.pendingTiles[[t.x,t.y,t.zoom].join(":")] = true
       var url = 'https://cartocdn-ashbu.global.ssl.fastly.net/fdansv/api/v1/map/b03db5a9b69ce6d4d3ee14949ece15d8:1457562289526/0/{z}/{x}/{y}.geojson?map_key=794a3db60129527035e4c8ab66968a29cb1568be&api_key=794a3db60129527035e4c8ab66968a29cb1568be&cache_policy=persist'
         .replace('{x}', t.x)
         .replace('{y}', t.y)
@@ -29,9 +31,17 @@ Renderer.prototype = {
       request(url, function (error, response, body) {
         if (!error && response.statusCode == 200) {
           self.drawTile(this, JSON.parse(body))
+          delete self.pendingTiles[[this.x,this.y,this.zoom].join(":")]
+          if (Object.keys(self.pendingTiles).length === 0){
+            self.finalize(callback)
+          }
         }
       }.bind(t))
     })
+  },
+  finalize: function (callback) {
+    this.canvas.stroke()
+    callback(this.canvas.toString())
   },
 
   drawTile: function (tilePoint, tile) {
@@ -75,13 +85,17 @@ Renderer.prototype = {
     return {x: x, y: y, zoom: this.zoom}
   },
 
+  _getTilePixels: function (tilePoint) {
+    var sidePixels = 256 * Math.pow(2, zoom)
+  },
+
   _wrapX : function (x, zoom) {
     var limit_x = Math.pow(2, zoom)
     var corrected_x = ((x % limit_x) + limit_x) % limit_x
     return corrected_x
   },
 
-  _projectPoint : function(x, y) {
+  _projectPoint : function(x, y, tilePoint) {
     var proportion = 256 / this.width
     var corrected_x = this._wrapX(tilePoint.x, tilePoint.zoom)
     var equatorLength = 6378137 * 2 * Math.PI
@@ -93,21 +107,33 @@ Renderer.prototype = {
     return [x,y]
   },
 
-  renderFeature: function(feature, tilePoint) {
+  _getBasePosition: function (tilePoint){
+    var pixelsPerSide = Math.pow(2, this.zoom) * 256
+    var xViewport = (pixelsPerSide * (this.getBounds().w + 6378137 * Math.PI))/(6378137 * 2 * Math.PI)
+    var yViewport = pixelsPerSide - (pixelsPerSide * (this.getBounds().n + 6378137 * Math.PI/2))/(6378137 * Math.PI)
+    var xTile = 256 * tilePoint.x
+    var yTile = 256 * tilePoint.y
+    return [xTile - xViewport, yTile - yViewport]
+  },
 
+  renderFeature: function(feature, tilePoint) {
+    var self = this
+    var basePosition = this._getBasePosition(tilePoint)
     if (feature.geometry.type === 'GeometryCollection') return
     var first = true
     if (feature.geometry.type === 'MultiPolygon') {
       feature.geometry.coordinates.forEach(function(mp) {
         mp.forEach(function(poly) {
           poly.forEach(function(p) {
-            var projected = this.projectPoint.apply(this,p)
+            var projected = self._projectPoint(p[0], p[1], tilePoint)
+            projected[0] += basePosition[0]
+            projected[1] += basePosition[1]
             if(first){
               first = false
-              this.canvas.moveTo.apply(c, projected)
+              self.canvas.moveTo.apply(self.canvas, projected)
             }
             else{
-              this.canvas.lineTo.apply(c, projected)
+              self.canvas.lineTo.apply(self.canvas, projected)
             }
           })
           first = true
@@ -116,12 +142,14 @@ Renderer.prototype = {
     } else if (feature.geometry.type === 'Polygon') {
       feature.geometry.coordinates.forEach(function (poly) {
         poly.forEach(function (p) {
-          var projected = this.projectPoint.apply(this, p)
+          var projected = self._projectPoint( [0], p[1], tilePoint)
+          projected[0] += basePosition[0]
+          projected[1] += basePosition[1]
           if (first) {
             first = false
-            this.canvas.moveTo.apply(c, projected)
+            self.canvas.moveTo.apply(self.canvas, projected)
           } else {
-            this.canvas.lineTo.apply(c, projected)
+            self.canvas.lineTo.apply(self.canvas, projected)
           }
         })
         first = true
