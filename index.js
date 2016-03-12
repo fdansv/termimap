@@ -23,7 +23,6 @@ var box = blessed.box({
   },
   style: {
     fg: 'white',
-    bg: 'magenta',
     border: {
       fg: '#fff000'
     },
@@ -36,16 +35,10 @@ screen.key(['escape', 'q', 'C-c'], function(ch, key) {
 
 var coordinates = [0,0]
 renderer.generateMap(coordinates, 3, function (text) {
+  console.log(text)
   box.content = text
+  screen.append(box);
+  screen.render();
 })
-// require('fs').readFile('./testile.geojson', 'utf8', function (err, data) {
-//   c.fill()
-//   box.content = c.toString().yellow
-//   screen.append(box);
-//   screen.render();
-// });
-
-screen.append(box);
-screen.render();
 
 
