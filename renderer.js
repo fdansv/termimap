@@ -2,8 +2,8 @@ var Canvas = require('drawille-canvas')
 var request = require('request')
 
 function Renderer (width, height) {
-  this.width = width * 2 
-  this.height = height * 4 
+  this.width = width * 2 - 4
+  this.height = height * 4 - 8
   this.canvas = new Canvas(this.width, this.height)
   this.pendingTiles = {}
 }
