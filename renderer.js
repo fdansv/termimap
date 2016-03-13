@@ -155,6 +155,17 @@ Renderer.prototype = {
         first = true
       })
     }
+  },
+  geo2Webmercator: function (x_lon, y_lat) {
+    x_lon = x_lon % 180
+    // 0.017453292519943295 => Deg to rad constant
+    var num = x_lon * 0.017453292519943295
+    // 6378137 => Earth radius
+    var x = 6378137.0 * num
+    var a = y_lat * 0.017453292519943295
+    var x_mercator = x
+    var y_mercator = 3189068.5 * Math.log((1.0 + Math.sin(a)) / (1.0 - Math.sin(a)))
+    return [y_mercator, x_mercator]
   }  
 }
 
