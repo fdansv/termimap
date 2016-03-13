@@ -4,7 +4,7 @@ var request = require('request')
 function Renderer (width, height) {
   this.width = width * 2 
   this.height = height * 4 
-  this.canvas = new Canvas(width, height)
+  this.canvas = new Canvas(this.width, this.height)
   this.pendingTiles = {}
 }
 
