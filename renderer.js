@@ -19,7 +19,7 @@ Renderer.prototype = {
 
   generateMap: function (coordinates, zoom, callback) {
     var self = this
-    this.coordinates = coordinates
+    this.coordinates = this.geo2Webmercator.apply(this, coordinates)
     this.zoom = zoom
     var tilesToDownload = this._getTilesToLoad()
     tilesToDownload.forEach(function (t) {
