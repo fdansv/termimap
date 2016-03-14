@@ -33,10 +33,9 @@ screen.key(['escape', 'q', 'C-c'], function(ch, key) {
   return process.exit(0);
 });
 
-var coordinates = [0,0]
-renderer.generateMap(coordinates, 3, function (text) {
-  console.log(text)
-  box.content = text
+var coordinates = [30,-75]
+renderer.generateMap(coordinates, 2, function (text) {
+  box.content = text.white
   screen.append(box);
   screen.render();
 })
