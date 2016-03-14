@@ -125,6 +125,7 @@ Renderer.prototype = {
     if (feature.geometry.type === 'GeometryCollection') return
     var first = true
     if (feature.geometry.type === 'MultiPolygon') {
+
       feature.geometry.coordinates.forEach(function(mp) {
         mp.forEach(function(poly) {
           poly.forEach(function(p) {
@@ -141,8 +142,10 @@ Renderer.prototype = {
           })
           first = true
         })
+        first = true
       })
     } else if (feature.geometry.type === 'Polygon') {
+
       feature.geometry.coordinates.forEach(function (poly) {
         poly.forEach(function (p) {
           var projected = self._projectPoint( [0], p[1], tilePoint)
