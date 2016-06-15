@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 var colors = require('colors')
 var clear = require('clear')
 var blessed = require('blessed');
@@ -33,7 +35,7 @@ screen.key(['escape', 'q', 'C-c'], function(ch, key) {
   return process.exit(0);
 });
 
-var coordinates = [30,-75]
+var coordinates = process.argv[2].split(',').map(function(n){return parseInt(n)})
 renderer.generateMap(coordinates, 2, function (text) {
   box.content = text.white
   screen.append(box);
